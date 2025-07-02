@@ -6,6 +6,26 @@ import autoTable from 'jspdf-autotable';
 import './spreadsheet.css';
 import NewAction from './Newaction';
 import { getStatusClass, getPriorityClass } from '../utils/statusUtils';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faBars, 
+  faEyeSlash, 
+  faSort, 
+  faFilter, 
+  faUpload, 
+  faDownload, 
+  faShareAlt, 
+  faPlus, 
+  faTasks, 
+  faCalendarAlt, 
+  faCheckCircle, 
+  faUser, 
+  faLink, 
+  faUserTag, 
+  faExclamationCircle, 
+  faClock, 
+  faDollarSign 
+} from '@fortawesome/free-solid-svg-icons';
 
 interface JobRequest {
   id: number;
@@ -203,7 +223,6 @@ const Spreadsheet: React.FC = () => {
 
         if (importedData.length) {
           setData(prev => [...prev, ...importedData]);
-          // Apply current filters and search to imported data
           let filteredData = [...importedData, ...data];
           if (searchTerm) {
             filteredData = filteredData.filter(item =>
@@ -231,64 +250,62 @@ const Spreadsheet: React.FC = () => {
     event.target.value = '';
   };
 
-const handleExport = () => {
-  const doc = new jsPDF();
-  doc.setFontSize(16);
-  doc.text('Job Requests Dashboard', 14, 20);
+  const handleExport = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Job Requests Dashboard', 14, 20);
 
-  // Define color maps
-  const statusColors: { [key in JobRequest['status']]: [number, number, number] } = {
-    'In-process': [33, 150, 243],
-    'Need to start': [255, 152, 0],
-    'Complete': [76, 175, 80],
-    'Blocked': [244, 67, 54],
-    'status-default': [0, 0, 0],
+    const statusColors: { [key in JobRequest['status']]: [number, number, number] } = {
+      'In-process': [33, 150, 243],
+      'Need to start': [255, 152, 0],
+      'Complete': [76, 175, 80],
+      'Blocked': [244, 67, 54],
+      'status-default': [0, 0, 0],
+    };
+
+    const priorityColors: { [key in JobRequest['priority']]: [number, number, number] } = {
+      'High': [244, 67, 54],
+      'Medium': [255, 152, 0],
+      'Low': [76, 175, 80],
+      'priority-default': [0, 0, 0],
+    };
+
+    const styledData = workingData.map(item => ({
+      ...item,
+      status: { text: item.status, styles: { textColor: statusColors[item.status as keyof typeof statusColors] || statusColors['status-default'] } },
+      priority: { text: item.priority, styles: { textColor: priorityColors[item.priority as keyof typeof priorityColors] || priorityColors['priority-default'] } },
+    }));
+
+    const columns = [
+      { header: 'ID', dataKey: 'id' },
+      { header: 'Job Request', dataKey: 'jobRequest' },
+      { header: 'Submitted', dataKey: 'submitted' },
+      { header: 'Status', dataKey: 'status.text' },
+      { header: 'Submitter', dataKey: 'submitter' },
+      { header: 'URL', dataKey: 'url' },
+      { header: 'Assigned', dataKey: 'assigned' },
+      { header: 'Priority', dataKey: 'priority.text' },
+      { header: 'Due Date', dataKey: 'dueDate' },
+      { header: 'Est. Value', dataKey: 'estValue' },
+    ];
+
+    autoTable(doc, {
+      columns,
+      body: styledData as any[],
+      startY: 30,
+      styles: { fontSize: 10, cellPadding: 2 },
+      headStyles: { fillColor: [33, 150, 243], textColor: [255, 255, 255] },
+      didDrawCell: (data) => {
+        if (data.column.dataKey === 'url' && data.cell.text[0]) {
+          doc.setTextColor(0, 0, 255);
+          doc.textWithLink(data.cell.text[0], data.cell.x + 2, data.cell.y + 5, { url: data.cell.text[0] });
+          doc.setTextColor(0, 0, 0);
+        }
+      },
+    });
+
+    doc.save(`job_requests_${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`);
   };
-
-  const priorityColors: { [key in JobRequest['priority']]: [number, number, number] } = {
-    'High': [244, 67, 54],
-    'Medium': [255, 152, 0],
-    'Low': [76, 175, 80],
-    'priority-default': [0, 0, 0],
-  };
-
-  // Prepare data with inline styles
-  const styledData = workingData.map(item => ({
-    ...item,
-    status: { text: item.status, styles: { textColor: statusColors[item.status as keyof typeof statusColors] || statusColors['status-default'] } },
-    priority: { text: item.priority, styles: { textColor: priorityColors[item.priority as keyof typeof priorityColors] || priorityColors['priority-default'] } },
-  }));
-
-  const columns = [
-    { header: 'ID', dataKey: 'id' },
-    { header: 'Job Request', dataKey: 'jobRequest' },
-    { header: 'Submitted', dataKey: 'submitted' },
-    { header: 'Status', dataKey: 'status.text' },
-    { header: 'Submitter', dataKey: 'submitter' },
-    { header: 'URL', dataKey: 'url' },
-    { header: 'Assigned', dataKey: 'assigned' },
-    { header: 'Priority', dataKey: 'priority.text' },
-    { header: 'Due Date', dataKey: 'dueDate' },
-    { header: 'Est. Value', dataKey: 'estValue' },
-  ];
-
-  autoTable(doc, {
-    columns,
-    body: styledData as any[], // Explicit cast to handle jspdf-autotable type issues
-    startY: 30,
-    styles: { fontSize: 10, cellPadding: 2 },
-    headStyles: { fillColor: [33, 150, 243], textColor: [255, 255, 255] },
-    didDrawCell: (data) => {
-      if (data.column.dataKey === 'url' && data.cell.text[0]) {
-        doc.setTextColor(0, 0, 255);
-        doc.textWithLink(data.cell.text[0], data.cell.x + 2, data.cell.y + 5, { url: data.cell.text[0] });
-        doc.setTextColor(0, 0, 0);
-      }
-    },
-  });
-
-  doc.save(`job_requests_${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`);
-};
 
   const handleShare = () => {
     const params = new URLSearchParams({
@@ -321,16 +338,24 @@ const handleExport = () => {
     navigate('/profile');
   };
 
- const visibleColumns: (keyof JobRequest)[] = 
-  (['jobRequest', 'submitted', 'status', 'submitter', 'url', 'assigned', 'priority', 'dueDate', 'estValue'] as (keyof JobRequest)[])
-  .filter(col => !hiddenColumns.includes(col));
-
+  const visibleColumns: (keyof JobRequest)[] = 
+    (['jobRequest', 'submitted', 'status', 'submitter', 'url', 'assigned', 'priority', 'dueDate', 'estValue'] as (keyof JobRequest)[])
+    .filter(col => !hiddenColumns.includes(col));
 
   return (
     <div className="container">
       <div className="card">
         <div className="header-container">
           <h2 className="card-title">Job Requests Dashboard</h2>
+          <div className="search-container">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search job request, submitter, or assigned..."
+              value={searchTerm}
+              onChange={handleSearch}
+            />
+          </div>
           <div className="profile-section" onClick={handleProfileClick}>
             <img src="/profile.jpg" alt="Profile" className="profile-image" style={{ width: '40px', height: '40px' }} />
             <span
@@ -354,17 +379,17 @@ const handleExport = () => {
             <div className="toolbar">
               <div className="toolbar-left">
                 <button className="toolbar-button" onClick={() => {}}>
-                  Tool bar
+                  <FontAwesomeIcon icon={faBars} /> Tool bar
                 </button>
                 <button className="toolbar-button" onClick={handleHideFields}>
-                  Hide fields
+                  <FontAwesomeIcon icon={faEyeSlash} /> Hide fields
                 </button>
                 <button className="toolbar-button" onClick={() => handleSort('dueDate')}>
-                  Sort
+                  <FontAwesomeIcon icon={faSort} /> Sort
                 </button>
                 <div className="filter-container">
                   <button className="toolbar-button" onClick={handleFilter}>
-                    Filter {filterValue ? `(${filterMode}: ${filterValue})` : ''}
+                    <FontAwesomeIcon icon={faFilter} /> Filter {filterValue ? ` (${filterMode}: ${filterValue})` : ''}
                   </button>
                   {showFilterMenu && (
                     <div className="filter-menu">
@@ -399,27 +424,20 @@ const handleExport = () => {
                     </div>
                   )}
                 </div>
-                <input
-                  type="text"
-                  className="search-input"
-                  placeholder="Search job request, submitter, or assigned..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                />
               </div>
               <div className="toolbar-right">
                 <label className="toolbar-button">
-                  Import
+                  <FontAwesomeIcon icon={faUpload} /> Import
                   <input type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
                 </label>
                 <button className="toolbar-button" onClick={handleExport}>
-                  Export
+                  <FontAwesomeIcon icon={faDownload} /> Export
                 </button>
                 <button className="toolbar-button" onClick={handleShare}>
-                  Share
+                  <FontAwesomeIcon icon={faShareAlt} /> Share
                 </button>
                 <button className="toolbar-button action-button" onClick={() => setShowNewActionForm(true)}>
-                  New Action
+                  <FontAwesomeIcon icon={faPlus} /> New Action
                 </button>
               </div>
             </div>
@@ -429,6 +447,7 @@ const handleExport = () => {
                   <tr>
                     {visibleColumns.map(column => (
                       <th key={column} className="table-header-cell" onClick={() => handleSort(column)}>
+                        <FontAwesomeIcon icon={getColumnIcon(column)} className="table-header-icon" />
                         {column.charAt(0).toUpperCase() + column.slice(1).replace('estValue', 'Est. Value')}
                       </th>
                     ))}
@@ -509,6 +528,23 @@ const handleExport = () => {
       </div>
     </div>
   );
+};
+
+// Helper function to map columns to icons
+const getColumnIcon = (column: keyof JobRequest) => {
+  const iconMap: { [key in keyof JobRequest]: any } = {
+    id: faTasks,
+    jobRequest: faTasks,
+    submitted: faCalendarAlt,
+    status: faCheckCircle,
+    submitter: faUser,
+    url: faLink,
+    assigned: faUserTag,
+    priority: faExclamationCircle,
+    dueDate: faClock,
+    estValue: faDollarSign,
+  };
+  return iconMap[column] || faTasks; // Default to faTasks if no specific icon
 };
 
 export default Spreadsheet;
