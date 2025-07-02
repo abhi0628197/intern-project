@@ -88,7 +88,7 @@ const Spreadsheet: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5173';
+  const BASE_URL = import.meta.env.VITE_BASE_URL || 'https://intern-project-hdfi.vercel.app/';
   const profile = {
     name: 'Sumit Singh',
     imageUrl: 'https://via.placeholder.com/40',
