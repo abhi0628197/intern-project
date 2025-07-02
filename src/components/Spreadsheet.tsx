@@ -321,7 +321,10 @@ const handleExport = () => {
     navigate('/profile');
   };
 
-  const visibleColumns: (keyof JobRequest)[] = ['jobRequest', 'submitted', 'status', 'submitter', 'url', 'assigned', 'priority', 'dueDate', 'estValue'].filter(col => !hiddenColumns.includes(col));
+ const visibleColumns: (keyof JobRequest)[] = 
+  (['jobRequest', 'submitted', 'status', 'submitter', 'url', 'assigned', 'priority', 'dueDate', 'estValue'] as (keyof JobRequest)[])
+  .filter(col => !hiddenColumns.includes(col));
+
 
   return (
     <div className="container">
