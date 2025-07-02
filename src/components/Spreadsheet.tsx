@@ -20,87 +20,40 @@ interface JobRequest {
   estValue: string;
 }
 
-interface RecordViewProps {
-  job: JobRequest;
-  onBack: () => void;
-}
-
-const RecordView: React.FC<RecordViewProps> = ({ job, onBack }) => (
-  <div className="record-view">
-    <button className="back-button" onClick={onBack}>Back to Table</button>
-    <h2 className="record-title">Job Request Details</h2>
-    <div className="record-details">
-      {Object.entries(job).map(([key, value]) => (
-        <div key={key} className="record-field">
-          <strong>{key.charAt(0).toUpperCase() + key.slice(1).replace('estValue', 'Est. Value')}:</strong>
-          {key === 'url' && value ? (
-            <a href={value} target="_blank" rel="noopener noreferrer" className="url-link">{value}</a>
-          ) : key === 'status' ? (
-            <span className={`status-pill ${getStatusClass(value)}`}>{value}</span>
-          ) : key === 'priority' ? (
-            <span className={`priority-pill ${getPriorityClass(value)}`}>{value}</span>
-          ) : (
-            value || 'N/A'
-          )}
-        </div>
-      ))}
+const RecordView: React.FC<{ job: JobRequest; onBack: () => void }> = ({ job, onBack }) => {
+  return (
+    <div className="record-view">
+      <button className="back-button" onClick={onBack}>Back to Table</button>
+      <h2 className="record-title">Job Request Details</h2>
+      <div className="record-details">
+        {Object.entries(job).map(([key, value]) => (
+          <div key={key} className="record-field">
+            <strong>{key.charAt(0).toUpperCase() + key.slice(1).replace('estValue', 'Est. Value')}:</strong>
+            {key === 'url' && value ? (
+              <a href={value} target="_blank" rel="noopener noreferrer" className="url-link">{value}</a>
+            ) : key === 'status' ? (
+              <span className={`status-pill ${getStatusClass(value as string)}`}>{value}</span>
+            ) : key === 'priority' ? (
+              <span className={`priority-pill ${getPriorityClass(value as string)}`}>{value}</span>
+            ) : (
+              value || 'N/A'
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Spreadsheet: React.FC = () => {
   const [data, setData] = useState<JobRequest[]>([
-    {
-      id: 1,
-      jobRequest: 'Project A',
-      submitted: '2025-06-15',
-      status: 'In-process',
-      submitter: 'User1',
-      url: 'http://example.com',
-      assigned: 'John Doe',
-      priority: 'High',
-      dueDate: '2025-07-10',
-      estValue: '$5,000',
-    },
-    {
-      id: 2,
-      jobRequest: 'Project B',
-      submitted: '2025-06-20',
-      status: 'Need to start',
-      submitter: 'User2',
-      url: 'http://example2.com',
-      assigned: 'Jane Smith',
-      priority: 'Medium',
-      dueDate: '2025-07-15',
-      estValue: '$3,000',
-    },
-    {
-      id: 3,
-      jobRequest: 'Project C',
-      submitted: '2025-06-25',
-      status: 'Complete',
-      submitter: 'User3',
-      url: 'http://example3.com',
-      assigned: 'Bob Johnson',
-      priority: 'Low',
-      dueDate: '2025-07-20',
-      estValue: '$1,000',
-    },
-    {
-      id: 4,
-      jobRequest: 'Project D',
-      submitted: '2025-06-30',
-      status: 'Blocked',
-      submitter: 'User4',
-      url: 'http://example4.com',
-      assigned: 'Alice Brown',
-      priority: 'High',
-      dueDate: '2025-07-25',
-      estValue: '$2,000',
-    },
+    { id: 1, jobRequest: 'Project A', submitted: '2025-06-15', status: 'In-process', submitter: 'User1', url: 'http://example.com', assigned: 'John Doe', priority: 'High', dueDate: '2025-07-10', estValue: '$5,000' },
+    { id: 2, jobRequest: 'Project B', submitted: '2025-06-20', status: 'Need to start', submitter: 'User2', url: 'http://example2.com', assigned: 'Jane Smith', priority: 'Medium', dueDate: '2025-07-15', estValue: '$3,000' },
+    { id: 3, jobRequest: 'Project C', submitted: '2025-06-25', status: 'Complete', submitter: 'User3', url: 'http://example3.com', assigned: 'Bob Johnson', priority: 'Low', dueDate: '2025-07-20', estValue: '$1,000' },
+    { id: 4, jobRequest: 'Project D', submitted: '2025-06-30', status: 'Blocked', submitter: 'User4', url: 'http://example4.com', assigned: 'Alice Brown', priority: 'High', dueDate: '2025-07-25', estValue: '$2,000' },
   ]);
   const [workingData, setWorkingData] = useState<JobRequest[]>([...data]);
-  const [hiddenColumns, setHiddenColumns] = useState<(keyof JobRequest)[]>([]);
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [sortColumn, setSortColumn] = useState<keyof JobRequest | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
   const [filterMode, setFilterMode] = useState<'status' | 'priority' | null>(null);
@@ -114,10 +67,11 @@ const Spreadsheet: React.FC = () => {
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
 
   const navigate = useNavigate();
+
   const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5173';
   const profile = {
     name: 'Sumit Singh',
-    imageUrl: '/profile.jpg',
+    imageUrl: 'https://via.placeholder.com/40',
     email: 'sumit.singh@example.com',
     role: 'Admin',
     joinedDate: '2024-01-15',
@@ -132,8 +86,10 @@ const Spreadsheet: React.FC = () => {
     const rowIndex = params.get('rowIndex');
 
     setSearchTerm(search);
-    setFilterMode(mode);
-    setFilterValue(value);
+    if (mode && (mode === 'status' || mode === 'priority') && value) {
+      setFilterMode(mode);
+      setFilterValue(value);
+    }
     if (rowIndex && !isNaN(parseInt(rowIndex)) && parseInt(rowIndex) < data.length) {
       setSelectedRowIndex(parseInt(rowIndex));
     }
@@ -141,9 +97,9 @@ const Spreadsheet: React.FC = () => {
     let filteredData = [...data];
     if (search) {
       filteredData = filteredData.filter(item =>
-        [item.jobRequest, item.submitter, item.assigned].some(field =>
-          field.toLowerCase().includes(search.toLowerCase())
-        )
+        item.jobRequest.toLowerCase().includes(search.toLowerCase()) ||
+        item.submitter.toLowerCase().includes(search.toLowerCase()) ||
+        item.assigned.toLowerCase().includes(search.toLowerCase())
       );
     }
     if (mode && value) {
@@ -156,7 +112,7 @@ const Spreadsheet: React.FC = () => {
   }, [data]);
 
   const handleSort = (column: keyof JobRequest) => {
-    const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : sortColumn === column && sortDirection === 'desc Mahara aroha mai' ? null : 'asc';
+    const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : sortColumn === column && sortDirection === 'desc' ? null : 'asc';
     setSortColumn(newDirection ? column : null);
     setSortDirection(newDirection);
 
@@ -164,7 +120,6 @@ const Spreadsheet: React.FC = () => {
       setWorkingData([...data]);
       return;
     }
-
     setWorkingData([...workingData].sort((a, b) => {
       const aValue = a[column];
       const bValue = b[column];
@@ -211,18 +166,16 @@ const Spreadsheet: React.FC = () => {
   };
 
   const handleHideFields = () => {
-    setHiddenColumns(prev =>
-      prev.includes('url') ? prev.filter(colF => col !== 'url') : [...prev, 'url']
-    );
+    setHiddenColumns(prev => prev.includes('url') ? prev.filter(col => col !== 'url') : [...prev, 'url']);
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
     setWorkingData(data.filter(item =>
-      [item.jobRequest, item.submitter, item.assigned].some(field =>
-        field.toLowerCase().includes(term.toLowerCase())
-      )
+      item.jobRequest.toLowerCase().includes(term.toLowerCase()) ||
+      item.submitter.toLowerCase().includes(term.toLowerCase()) ||
+      item.assigned.toLowerCase().includes(term.toLowerCase())
     ));
   };
 
@@ -239,9 +192,7 @@ const Spreadsheet: React.FC = () => {
           id: row.id ? parseInt(row.id, 10) : data.length + index + 1,
           jobRequest: row.jobRequest || '',
           submitted: /^\d{4}-\d{2}-\d{2}$/.test(row.submitted) ? row.submitted : '',
-          status: ['In-process', 'Need to start', 'Complete', 'Blocked'].includes(row.status)
-            ? row.status
-            : 'Need to start',
+          status: ['In-process', 'Need to start', 'Complete', 'Blocked'].includes(row.status) ? row.status : 'Need to start',
           submitter: row.submitter || '',
           url: /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/.test(row.url) ? row.url : '',
           assigned: row.assigned || '',
@@ -252,12 +203,13 @@ const Spreadsheet: React.FC = () => {
 
         if (importedData.length) {
           setData(prev => [...prev, ...importedData]);
+          // Apply current filters and search to imported data
           let filteredData = [...importedData, ...data];
           if (searchTerm) {
             filteredData = filteredData.filter(item =>
-              [item.jobRequest, item.submitter, item.assigned].some(field =>
-                field.toLowerCase().includes(searchTerm.toLowerCase())
-              )
+              item.jobRequest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              item.submitter.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              item.assigned.toLowerCase().includes(searchTerm.toLowerCase())
             );
           }
           if (filterMode && filterValue) {
@@ -295,47 +247,34 @@ const Spreadsheet: React.FC = () => {
       { header: 'Priority', dataKey: 'priority' },
       { header: 'Due Date', dataKey: 'dueDate' },
       { header: 'Est. Value', dataKey: 'estValue' },
-    ].filter(col => !hiddenColumns.includes(col.dataKey as keyof JobRequest));
+    ];
 
     autoTable(doc, {
       columns,
-      body: workingData,
+      body: workingData as any[], // Explicit cast to handle jspdf-autotable type issues
       startY: 30,
       styles: { fontSize: 10, cellPadding: 2 },
       headStyles: { fillColor: [33, 150, 243], textColor: [255, 255, 255] },
       columnStyles: {
-        status: { cellWidth: 'auto' },
-        priority: { cellWidth: 'auto' },
+        status: {
+          cellWidth: 'auto',
+          textColor: (data: JobRequest) =>
+            ['#2196f3', '#ff9800', '#4caf50', '#f44336', '#000000'][
+              ['In-process', 'Need to start', 'Complete', 'Blocked', 'status-default'].indexOf(data.status)
+            ],
+        },
+        priority: {
+          cellWidth: 'auto',
+          textColor: (data: JobRequest) =>
+            ['#f44336', '#ff9800', '#4caf50', '#000000'][
+              ['High', 'Medium', 'Low', 'priority-default'].indexOf(data.priority)
+            ],
+        }
       },
       didDrawCell: (data) => {
         if (data.column.dataKey === 'url' && data.cell.text[0]) {
           doc.setTextColor(0, 0, 255);
           doc.textWithLink(data.cell.text[0], data.cell.x + 2, data.cell.y + 5, { url: data.cell.text[0] });
-          doc.setTextColor(0, 0, 0);
-        }
-        if (data.column.dataKey === 'status' && data.cell.text[0]) {
-          const status = data.cell.text[0];
-          const statusColors: { [key: string]: number[] } = {
-            'In-process': [33, 150, 243],
-            'Need to start': [255, 152, 0],
-            Complete: [76, 175, 80],
-            Blocked: [244, 67, 54],
-            'status-default': [0, 0, 0],
-          };
-          doc.setTextColor(...(statusColors[status] || statusColors['status-default']));
-          doc.text(data.cell.text[0], data.cell.x + 2, data.cell.y + 5);
-          doc.setTextColor(0, 0, 0);
-        }
-        if (data.column.dataKey === 'priority' && data.cell.text[0]) {
-          const priority = data.cell.text[0];
-          const priorityColors: { [key: string]: number[] } = {
-            High: [244, 67, 54],
-            Medium: [255, 152, 0],
-            Low: [76, 175, 80],
-            'priority-default': [0, 0, 0],
-          };
-          doc.setTextColor(...(priorityColors[priority] || priorityColors['priority-default']));
-          doc.text(data.cell.text[0], data.cell.x + 2, data.cell.y + 5);
           doc.setTextColor(0, 0, 0);
         }
       },
@@ -375,18 +314,7 @@ const Spreadsheet: React.FC = () => {
     navigate('/profile');
   };
 
-  const visibleColumns: (keyof JobRequest)[] = [
-    'id',
-    'jobRequest',
-    'submitted',
-    'status',
-    'submitter',
-    'url',
-    'assigned',
-    'priority',
-    'dueDate',
-    'estValue',
-  ].filter(col => !hiddenColumns.includes(col));
+  const visibleColumns: (keyof JobRequest)[] = ['jobRequest', 'submitted', 'status', 'submitter', 'url', 'assigned', 'priority', 'dueDate', 'estValue'].filter(col => !hiddenColumns.includes(col));
 
   return (
     <div className="container">
@@ -394,16 +322,17 @@ const Spreadsheet: React.FC = () => {
         <div className="header-container">
           <h2 className="card-title">Job Requests Dashboard</h2>
           <div className="profile-section" onClick={handleProfileClick}>
-            <img src={profile.imageUrl} alt="Profile" className="profile-image" style={{ width: '40px', height: '40px' }} />
+            <img src="/profile.jpg" alt="Profile" className="profile-image" style={{ width: '40px', height: '40px' }} />
             <span
               style={{
                 fontSize: '20px',
                 marginLeft: '10px',
-                fontWeight: 500,
+                fontWeight: '500',
                 color: '#333',
                 fontFamily: 'Arial, sans-serif',
                 lineHeight: '1.2',
                 cursor: 'pointer',
+                display: 'inline-block',
               }}
             >
               {profile.name}
@@ -418,7 +347,7 @@ const Spreadsheet: React.FC = () => {
                   Tool bar
                 </button>
                 <button className="toolbar-button" onClick={handleHideFields}>
-                  {hiddenColumns.includes('url') ? 'Show URL' : 'Hide URL'}
+                  Hide fields
                 </button>
                 <button className="toolbar-button" onClick={() => handleSort('dueDate')}>
                   Sort
@@ -501,19 +430,15 @@ const Spreadsheet: React.FC = () => {
                       {visibleColumns.map(column => (
                         <td key={`${item.id}-${column}`} className="table-cell">
                           {column === 'status' ? (
-                            <span className={`status-pill ${getStatusClass(item[column])}`}>{item[column]}</span>
+                            <span className={`status-pill ${getStatusClass(item[column] as string)}`}>{item[column]}</span>
                           ) : column === 'url' ? (
-                            item[column] ? (
-                              <a href={item[column]} target="_blank" rel="noopener noreferrer" className="url-link">
-                                {item[column]}
-                              </a>
-                            ) : (
-                              'N/A'
-                            )
+                            <a href={item[column] as string} target="_blank" rel="noopener noreferrer" className="url-link">
+                              {item[column]}
+                            </a>
                           ) : column === 'jobRequest' ? (
                             <span className="table-cell-bold">{item[column]}</span>
                           ) : (
-                            item[column] || 'N/A'
+                            item[column]
                           )}
                         </td>
                       ))}
@@ -530,9 +455,9 @@ const Spreadsheet: React.FC = () => {
                     let updatedData = [...prev, newJob];
                     if (searchTerm) {
                       updatedData = updatedData.filter(item =>
-                        [item.jobRequest, item.submitter, item.assigned].some(field =>
-                          field.toLowerCase().includes(searchTerm.toLowerCase())
-                        )
+                        item.jobRequest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        item.submitter.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        item.assigned.toLowerCase().includes(searchTerm.toLowerCase())
                       );
                     }
                     if (filterMode && filterValue) {
@@ -543,7 +468,6 @@ const Spreadsheet: React.FC = () => {
                     }
                     return updatedData;
                   });
-                  setShowNewActionForm(false);
                 }}
                 onCancel={() => setShowNewActionForm(false)}
                 nextId={data.length + 1}
@@ -570,7 +494,7 @@ const Spreadsheet: React.FC = () => {
             )}
           </>
         ) : (
-          <RecordView job={workingData[selectedRowIndex]} onBack={handleBack} />
+          <RecordView job={workingData[selectedRowIndex!]} onBack={handleBack} />
         )}
       </div>
     </div>
