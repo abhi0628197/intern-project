@@ -231,57 +231,64 @@ const Spreadsheet: React.FC = () => {
     event.target.value = '';
   };
 
-  const handleExport = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Job Requests Dashboard', 14, 20);
+const handleExport = () => {
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text('Job Requests Dashboard', 14, 20);
 
-    const columns = [
-      { header: 'ID', dataKey: 'id' },
-      { header: 'Job Request', dataKey: 'jobRequest' },
-      { header: 'Submitted', dataKey: 'submitted' },
-      { header: 'Status', dataKey: 'status' },
-      { header: 'Submitter', dataKey: 'submitter' },
-      { header: 'URL', dataKey: 'url' },
-      { header: 'Assigned', dataKey: 'assigned' },
-      { header: 'Priority', dataKey: 'priority' },
-      { header: 'Due Date', dataKey: 'dueDate' },
-      { header: 'Est. Value', dataKey: 'estValue' },
-    ];
-
-    autoTable(doc, {
-      columns,
-      body: workingData as any[], // Explicit cast to handle jspdf-autotable type issues
-      startY: 30,
-      styles: { fontSize: 10, cellPadding: 2 },
-      headStyles: { fillColor: [33, 150, 243], textColor: [255, 255, 255] },
-      columnStyles: {
-        status: {
-          cellWidth: 'auto',
-          textColor: (data: JobRequest) =>
-            ['#2196f3', '#ff9800', '#4caf50', '#f44336', '#000000'][
-              ['In-process', 'Need to start', 'Complete', 'Blocked', 'status-default'].indexOf(data.status)
-            ],
-        },
-        priority: {
-          cellWidth: 'auto',
-          textColor: (data: JobRequest) =>
-            ['#f44336', '#ff9800', '#4caf50', '#000000'][
-              ['High', 'Medium', 'Low', 'priority-default'].indexOf(data.priority)
-            ],
-        }
-      },
-      didDrawCell: (data) => {
-        if (data.column.dataKey === 'url' && data.cell.text[0]) {
-          doc.setTextColor(0, 0, 255);
-          doc.textWithLink(data.cell.text[0], data.cell.x + 2, data.cell.y + 5, { url: data.cell.text[0] });
-          doc.setTextColor(0, 0, 0);
-        }
-      },
-    });
-
-    doc.save(`job_requests_${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`);
+  // Define color maps
+  const statusColors: { [key in JobRequest['status']]: [number, number, number] } = {
+    'In-process': [33, 150, 243],
+    'Need to start': [255, 152, 0],
+    'Complete': [76, 175, 80],
+    'Blocked': [244, 67, 54],
+    'status-default': [0, 0, 0],
   };
+
+  const priorityColors: { [key in JobRequest['priority']]: [number, number, number] } = {
+    'High': [244, 67, 54],
+    'Medium': [255, 152, 0],
+    'Low': [76, 175, 80],
+    'priority-default': [0, 0, 0],
+  };
+
+  // Prepare data with inline styles
+  const styledData = workingData.map(item => ({
+    ...item,
+    status: { text: item.status, styles: { textColor: statusColors[item.status as keyof typeof statusColors] || statusColors['status-default'] } },
+    priority: { text: item.priority, styles: { textColor: priorityColors[item.priority as keyof typeof priorityColors] || priorityColors['priority-default'] } },
+  }));
+
+  const columns = [
+    { header: 'ID', dataKey: 'id' },
+    { header: 'Job Request', dataKey: 'jobRequest' },
+    { header: 'Submitted', dataKey: 'submitted' },
+    { header: 'Status', dataKey: 'status.text' },
+    { header: 'Submitter', dataKey: 'submitter' },
+    { header: 'URL', dataKey: 'url' },
+    { header: 'Assigned', dataKey: 'assigned' },
+    { header: 'Priority', dataKey: 'priority.text' },
+    { header: 'Due Date', dataKey: 'dueDate' },
+    { header: 'Est. Value', dataKey: 'estValue' },
+  ];
+
+  autoTable(doc, {
+    columns,
+    body: styledData as any[], // Explicit cast to handle jspdf-autotable type issues
+    startY: 30,
+    styles: { fontSize: 10, cellPadding: 2 },
+    headStyles: { fillColor: [33, 150, 243], textColor: [255, 255, 255] },
+    didDrawCell: (data) => {
+      if (data.column.dataKey === 'url' && data.cell.text[0]) {
+        doc.setTextColor(0, 0, 255);
+        doc.textWithLink(data.cell.text[0], data.cell.x + 2, data.cell.y + 5, { url: data.cell.text[0] });
+        doc.setTextColor(0, 0, 0);
+      }
+    },
+  });
+
+  doc.save(`job_requests_${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`);
+};
 
   const handleShare = () => {
     const params = new URLSearchParams({
