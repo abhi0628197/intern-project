@@ -17,9 +17,10 @@ interface JobRequest {
 interface NewActionProps {
   onSave: (newJob: JobRequest) => void;
   onCancel: () => void;
+  nextId: number; // Added to ensure unique ID from Spreadsheet
 }
 
-const NewAction: React.FC<NewActionProps> = ({ onSave, onCancel }) => {
+const NewAction: React.FC<NewActionProps> = ({ onSave, onCancel, nextId }) => {
   const [formData, setFormData] = useState<Partial<JobRequest>>({
     jobRequest: '',
     submitted: '',
@@ -40,7 +41,7 @@ const NewAction: React.FC<NewActionProps> = ({ onSave, onCancel }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newJob: JobRequest = {
-      id: Date.now(), // Unique ID based on timestamp
+      id: nextId, // Use provided nextId
       ...formData,
       submitted: formData.submitted || new Date().toISOString().split('T')[0],
       status: formData.status || 'Need to start',
@@ -76,7 +77,7 @@ const NewAction: React.FC<NewActionProps> = ({ onSave, onCancel }) => {
                   name={field}
                   value={formData[field as keyof JobRequest] || ''}
                   onChange={handleChange}
-                  required
+                  required={field !== 'url' && field !== 'estValue'} // Make URL and estValue optional
                   className="form-input"
                 />
               )}
